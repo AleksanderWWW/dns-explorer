@@ -16,7 +16,8 @@ type ResolutionInfo struct {
 	IpAddress string `json:"IpAddress"`
 }
 
-func Resolve_hostname(hostname string) (ResolutionInfo, error) {
+func ResolveHostname(hostname string) (ResolutionInfo, error) {
+	_ = rootServers
 	return ResolutionInfo{
 		Hostname: hostname,
 	}, nil
