@@ -16,5 +16,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Returned info\n hostname: %s\n ip: %s", info.Hostname, info.IpAddress)
+	fmt.Printf("Returned info\n hostname: %s\n ip: %s\n", info.Hostname, info.IpAddress)
 }

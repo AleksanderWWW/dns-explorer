@@ -5,19 +5,12 @@ import (
 	"strings"
 )
 
-var rootServers []net.IP
-
-func init() {
-	rootServers = getRootServers()
-}
-
 type ResolutionInfo struct {
 	Hostname  string `json:"HostName"`
 	IpAddress string `json:"IpAddress"`
 }
 
 func ResolveHostname(hostname string) (ResolutionInfo, error) {
-	_ = rootServers
 	return ResolutionInfo{
 		Hostname: hostname,
 	}, nil
