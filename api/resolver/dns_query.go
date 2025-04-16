@@ -11,11 +11,11 @@ import (
 )
 
 type dnsQueryResult struct {
-	parser *dnsmessage.Parser
-	header *dnsmessage.Header
+	Parser *dnsmessage.Parser
+	Header *dnsmessage.Header
 }
 
-func runOutgoingDnsQuery(
+func RunOutgoingDnsQuery(
 	servers []net.IP,
 	question dnsmessage.Question,
 ) (*dnsQueryResult, error) {
@@ -27,16 +27,21 @@ func runOutgoingDnsQuery(
 
 	defer conn.Close()
 
-	buf, err := newMessageBuffer(question)
+	return doDNSQuery(conn, question)
+}
+
+func doDNSQuery(conn net.Conn, question dnsmessage.Question) (*dnsQueryResult, error) {
+	message, err := newDNSMessage(question)
 	if err != nil {
 		return nil, err
 	}
 
-	return doDNSQuery(conn, buf)
-}
+	buffer, err := message.Pack()
+	if err != nil {
+		return &dnsQueryResult{}, nil
+	}
 
-func doDNSQuery(conn net.Conn, buffer []byte) (*dnsQueryResult, error) {
-	_, err := conn.Write(buffer)
+	_, err = conn.Write(buffer)
 	if err != nil {
 		return nil, err
 	}
@@ -54,32 +59,22 @@ func doDNSQuery(conn net.Conn, buffer []byte) (*dnsQueryResult, error) {
 		return nil, err
 	}
 
-	// questions, err := p.AllQuestions()
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// if len(questions) != len(message.Questions) {
-	// 	return nil, fmt.Errorf(
-	// 		"answer packet has %d questions, expected %d",
-	// 		len(questions),
-	// 		len(message.Questions),
-	// 	)
-	// }
-
-	return &dnsQueryResult{
-		parser: &p,
-		header: &headers,
-	}, nil
-}
-
-func newMessageBuffer(question dnsmessage.Question) ([]byte, error) {
-	message, err := newDNSMessage(question)
+	questions, err := p.AllQuestions()
 	if err != nil {
-		return nil, err
+		return &dnsQueryResult{}, err
+	}
+	if len(questions) != len(message.Questions) {
+		return &dnsQueryResult{}, fmt.Errorf("answer packet doesn't have the same amount of questions")
+	}
+	err = p.SkipAllQuestions()
+	if err != nil {
+		return &dnsQueryResult{}, err
 	}
 
-	return message.Pack()
+	return &dnsQueryResult{
+		Parser: &p,
+		Header: &headers,
+	}, nil
 }
 
 func newDNSMessage(question dnsmessage.Question) (dnsmessage.Message, error) {

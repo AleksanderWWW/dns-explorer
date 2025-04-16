@@ -16,7 +16,7 @@ func ResolveHostname(hostname string) (ResolutionInfo, error) {
 	}, nil
 }
 
-func getRootServers() []net.IP {
+func GetRootServers() []net.IP {
 	rootServers := []net.IP{}
 	for _, rootServer := range strings.Split(ROOT_SERVERS, ",") {
 		rootServers = append(rootServers, net.ParseIP(rootServer))
