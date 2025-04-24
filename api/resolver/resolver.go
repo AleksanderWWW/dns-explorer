@@ -1,25 +1,28 @@
 package resolver
 
-import (
-	"net"
-	"strings"
-)
+import "github.com/miekg/dns"
 
-type ResolutionInfo struct {
-	Hostname  string `json:"HostName"`
-	IpAddress string `json:"IpAddress"`
-}
+func ResolveDNS(name string) (CachedDNSResponse, uint32, error) {
+	var records []string
+	var minTTL uint32 = 3600 // default fallback TTL
 
-func ResolveHostname(hostname string) (ResolutionInfo, error) {
-	return ResolutionInfo{
-		Hostname: hostname,
-	}, nil
-}
+	m := new(dns.Msg)
+	m.SetQuestion(dns.Fqdn(name), dns.TypeA)
 
-func GetRootServers() []net.IP {
-	rootServers := []net.IP{}
-	for _, rootServer := range strings.Split(ROOT_SERVERS, ",") {
-		rootServers = append(rootServers, net.ParseIP(rootServer))
+	c := new(dns.Client)
+	in, _, err := c.Exchange(m, "8.8.8.8:53")
+	if err != nil {
+		return CachedDNSResponse{}, 0, err
 	}
-	return rootServers
+
+	for _, ans := range in.Answer {
+		if a, ok := ans.(*dns.A); ok {
+			records = append(records, a.A.String())
+			if a.Hdr.Ttl < minTTL {
+				minTTL = a.Hdr.Ttl
+			}
+		}
+	}
+
+	return CachedDNSResponse{Records: records}, minTTL, nil
 }
