@@ -1,20 +1,42 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
+
+	"github.com/redis/go-redis/v9"
 
 	"github.com/AleksanderWWW/dns-explorer/resolver"
 )
 
+var ctx = context.Background()
+
 func main() {
-	host := "google.com"
+	rdb := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
 
-	info, err := resolver.ResolveHostname(host)
+	domain := "example.com"
 
+	// Check cache first
+	cached, err := resolver.GetFromCache(ctx, rdb, domain)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
-	fmt.Printf("Returned info\n hostname: %s\n ip: %s\n", info.Hostname, info.IpAddress)
+	if cached != nil {
+		fmt.Println("Cache hit:", cached.Records)
+		return
+	}
+
+	// Resolve and cache
+	res, ttl, err := resolver.ResolveDNS(domain)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Resolved:", res.Records, "TTL:", ttl)
+	if err := resolver.CacheDNSResponse(ctx, rdb, domain, res, ttl); err != nil {
+		panic(err)
+	}
 }
